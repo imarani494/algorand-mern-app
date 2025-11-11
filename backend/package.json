@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+<<<<<<< HEAD
     "start": "node dist/server.js"
+=======
+    "start": "node dist/server.js",
+    "render-build": "npm install && npm run build"
+>>>>>>> 2036adb9647a4dc040fda06de5521bab0399a4b0
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -22,5 +27,11 @@
     "@types/node": "^20.10.5",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
+<<<<<<< HEAD
+=======
+  },
+  "engines": {
+    "node": ">=18.0.0"
+>>>>>>> 2036adb9647a4dc040fda06de5521bab0399a4b0
   }
 }
