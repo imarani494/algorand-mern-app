@@ -100,4 +100,4 @@ Frontend (.env)
 env
 VITE_API_URL=http://localhost:5000
 
-## 📁 Project Structure
+
