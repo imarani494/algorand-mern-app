@@ -47,10 +47,10 @@ export const sendTransaction = async (
     // Get suggested transaction parameters
     const suggestedParams = await algodClient.getTransactionParams().do();
 
-    // Create transaction
+    // FIXED: Use correct parameter names for the method
     const transaction = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: account.addr,
-      to: toAddress,
+      sender: account.addr, // FIXED: Changed from 'from' to 'sender'
+      receiver: toAddress, // FIXED: Changed from 'to' to 'receiver'
       amount: amount,
       note: note ? new Uint8Array(Buffer.from(note)) : undefined,
       suggestedParams
@@ -68,11 +68,13 @@ export const sendTransaction = async (
     let status: "pending" | "confirmed" | "failed" = "pending";
 
     try {
-      const confirmation = await algosdk.waitForConfirmation(
+      // Use type assertion for confirmation response
+      const confirmation = (await algosdk.waitForConfirmation(
         algodClient,
         txId,
         4
-      );
+      )) as any;
+
       confirmedRound = confirmation["confirmed-round"];
       status = "confirmed";
     } catch (waitError) {
@@ -126,7 +128,10 @@ export const checkTransactionStatus = async (
     let status: "pending" | "confirmed" | "failed" = "pending";
 
     try {
-      const txInfo = await algodClient.pendingTransactionInformation(txId).do();
+      // Use type assertion for transaction info
+      const txInfo = (await algodClient
+        .pendingTransactionInformation(txId)
+        .do()) as any;
 
       if (txInfo["confirmed-round"]) {
         confirmedRound = txInfo["confirmed-round"];
@@ -155,21 +160,27 @@ export const checkTransactionStatus = async (
 
     if (!transactionDoc) {
       // Transaction not in database, create it
-      const txInfo = await algodClient
-        .pendingTransactionInformation(txId)
-        .do()
-        .catch(() => null);
+      try {
+        const txInfo = (await algodClient
+          .pendingTransactionInformation(txId)
+          .do()
+          .catch(() => null)) as any;
 
-      if (txInfo) {
-        const newTransaction = new Transaction({
-          txId,
-          from: algosdk.encodeAddress(txInfo.txn.txn.snd),
-          to: algosdk.encodeAddress(txInfo.txn.txn.rcv),
-          amount: txInfo.txn.txn.amt / 1_000_000,
-          status,
-          confirmedRound: confirmedRound || undefined
-        });
-        await newTransaction.save();
+        if (txInfo && txInfo.txn && txInfo.txn.txn) {
+          const txn = txInfo.txn.txn;
+
+          const newTransaction = new Transaction({
+            txId,
+            from: txn.snd ? algosdk.encodeAddress(txn.snd) : "unknown",
+            to: txn.rcv ? algosdk.encodeAddress(txn.rcv) : "unknown",
+            amount: txn.amt ? txn.amt / 1_000_000 : 0,
+            status,
+            confirmedRound: confirmedRound || undefined
+          });
+          await newTransaction.save();
+        }
+      } catch (dbError) {
+        console.error("Error creating transaction record:", dbError);
       }
     }
 
